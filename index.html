@@ -18,6 +18,9 @@
   button, .btn { font:inherit; border:1px solid var(--bd); background:#fff; color:var(--tx); padding:7px 12px; border-radius:6px; cursor:pointer }
   button.pri { background:var(--pri); border-color:var(--pri); color:#fff }
   button.lnk { border:0; background:none; color:var(--pri); padding:0 }
+  button.del { color:var(--bad); border-color:#f3c3be }
+  button.del:hover { background:var(--badbg) }
+  button.sm { padding:3px 9px; font-size:12px }
   header button { background:transparent; color:#fff; border-color:#ffffff55 }
   input, select, textarea { font:inherit; padding:7px 9px; border:1px solid var(--bd); border-radius:6px; width:100%; background:#fff; color:var(--tx) }
   label { display:block; font-size:12px; color:var(--mut); margin:8px 0 3px }
@@ -93,7 +96,7 @@
 
   <!-- DETALHE -->
   <section id="vDet" class="hide">
-    <div class="bar"><button id="btnVoltar">← Voltar</button><span style="flex:1"></span><button id="btnExcluir">Excluir processo</button></div>
+    <div class="bar"><button id="btnVoltar">← Voltar</button><span style="flex:1"></span><button id="btnEditar">✏️ Editar processo</button><button id="btnExcluir" class="del">🗑 Excluir processo</button></div>
     <div class="card">
       <div class="bar" style="margin:0"><h2 id="dTitulo" style="margin:0;flex:1"></h2><span id="dStatus"></span></div>
       <div class="grid2" id="dResumo" style="margin-top:10px"></div>
@@ -112,7 +115,8 @@
       <table class="steps"><thead><tr><th></th><th>Etapa</th><th>Prazo</th><th>Previsto</th><th>Realizado</th><th>Situação</th></tr></thead><tbody id="tbEtapas"></tbody></table>
     </div>
     <div class="card wrap">
-      <h3 style="margin-top:0">Histórico de marcações</h3>
+      <div class="bar"><h3 style="margin:0;flex:1">Histórico de marcações</h3><button id="btnLimpar" class="del sm">Limpar todo o histórico</button></div>
+      <p class="mut" style="margin-top:0">Marcou errado? Clique em <b>Remover</b> na linha. A etapa atual volta a ser a marcação anterior.</p>
       <table><thead><tr><th>Etapa</th><th>Desde</th><th>Registrado em</th><th>Por</th><th>Obs.</th><th></th></tr></thead><tbody id="tbHist"></tbody></table>
     </div>
   </section>
@@ -120,11 +124,11 @@
 
 <dialog id="dlgNovo">
   <form id="fNovo">
-    <h3 style="margin-top:0">Novo processo</h3>
+    <h3 style="margin-top:0" id="tNovo">Novo processo</h3>
     <label>Município</label><input name="municipio" required>
     <label>Data de início (etapa 1)</label><input name="data_inicio" type="date" required>
     <label>Observação</label><input name="observacao">
-    <div class="row"><button type="button" onclick="dlgNovo.close()">Cancelar</button><button class="pri">Criar</button></div>
+    <div class="row"><button type="button" onclick="dlgNovo.close()">Cancelar</button><button class="pri" id="bNovo">Criar</button></div>
   </form>
 </dialog>
 
@@ -170,6 +174,14 @@ const db = {
   async addProcesso(p) {
     if (DEMO) { const a = local.get("processos"); a.push({ ...p, id: crypto.randomUUID(), created_at: new Date().toISOString() }); return local.set("processos", a); }
     const { error } = await sb.from("processos").insert(p); if (error) throw error;
+  },
+  async updProcesso(id, p) {
+    if (DEMO) return local.set("processos", local.get("processos").map(x => x.id === id ? { ...x, ...p } : x));
+    const { error } = await sb.from("processos").update(p).eq("id", id); if (error) throw error;
+  },
+  async limparMarcacoes(pid) {
+    if (DEMO) return local.set("marcacoes", local.get("marcacoes").filter(m => m.processo_id !== pid));
+    const { error } = await sb.from("marcacoes").delete().eq("processo_id", pid); if (error) throw error;
   },
   async delProcesso(id) {
     if (DEMO) { local.set("processos", local.get("processos").filter(p => p.id !== id)); return local.set("marcacoes", local.get("marcacoes").filter(m => m.processo_id !== id)); }
@@ -294,7 +306,7 @@ function detalhe(id) {
       <td>${m.etapa >= FIM ? "Concluído" : m.etapa + ". " + esc(ET[m.etapa-1].nome)}</td>
       <td>${br(parse(m.data))}</td><td>${new Date(m.registrado_em).toLocaleString("pt-BR")}</td>
       <td>${esc(m.usuario)}</td><td>${esc(m.observacao)}</td>
-      <td><button class="lnk" data-del="${m.id}">desfazer</button></td></tr>`).join("")
+      <td><button class="del sm" data-del="${m.id}">🗑 Remover</button></td></tr>`).join("")
     || `<tr><td colspan="6" class="mut">Nenhuma marcação ainda — etapa 1 conta a partir da data de início.</td></tr>`;
 }
 
@@ -303,11 +315,24 @@ const tentar = fn => async (...a) => { try { await fn(...a); } catch (e) { alert
 $("#tbLista").onclick = e => { const tr = e.target.closest("tr[data-id]"); if (tr) detalhe(tr.dataset.id); };
 $("#busca").oninput = lista; $("#filtro").onchange = lista;
 $("#btnVoltar").onclick = lista;
-$("#btnNovo").onclick = () => { $("#fNovo").reset(); $("#fNovo").data_inicio.value = iso(hoje()); dlgNovo.showModal(); };
+let editId = null;
+function abrirForm(p) {
+  editId = p ? p.id : null; const f = $("#fNovo"); f.reset();
+  $("#tNovo").textContent = p ? "Editar processo" : "Novo processo"; $("#bNovo").textContent = p ? "Salvar" : "Criar";
+  f.municipio.value = p ? p.municipio : ""; f.data_inicio.value = p ? p.data_inicio : iso(hoje()); f.observacao.value = p?.observacao || "";
+  dlgNovo.showModal();
+}
+$("#btnNovo").onclick = () => abrirForm();
+$("#btnEditar").onclick = () => abrirForm(cache.procs.find(x => x.id === abertoId));
 $("#fNovo").onsubmit = tentar(async e => {
   e.preventDefault(); const f = e.target;
-  await db.addProcesso({ municipio: f.municipio.value.trim(), data_inicio: f.data_inicio.value, observacao: f.observacao.value || null });
+  const p = { municipio: f.municipio.value.trim(), data_inicio: f.data_inicio.value, observacao: f.observacao.value || null };
+  await (editId ? db.updProcesso(editId, p) : db.addProcesso(p));
   dlgNovo.close(); await carregar();
+});
+$("#btnLimpar").onclick = tentar(async () => {
+  if (!confirm("Remover TODAS as marcações deste processo? Ele volta para a etapa 1.")) return;
+  await db.limparMarcacoes(abertoId); await carregar();
 });
 $("#fMarcar").onsubmit = tentar(async e => {
   e.preventDefault(); const f = e.target;
@@ -315,7 +340,7 @@ $("#fMarcar").onsubmit = tentar(async e => {
   f.obs.value = ""; await carregar();
 });
 $("#tbHist").onclick = tentar(async e => {
-  const id = e.target.dataset.del; if (!id || !confirm("Desfazer esta marcação?")) return;
+  const id = e.target.dataset.del; if (!id || !confirm("Remover esta marcação?")) return;
   await db.delMarcacao(isNaN(id) ? id : +id); await carregar();
 });
 $("#btnExcluir").onclick = tentar(async () => {
