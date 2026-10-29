@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acompanhamento Dívida Ativa</title>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+  :root { --bg:#f5f6f8; --card:#fff; --tx:#1d2330; --mut:#6b7280; --bd:#e3e6eb; --pri:#1f5fbf;
+          --ok:#1a7f45; --okbg:#e3f5ea; --warn:#9a6200; --warnbg:#fff3d6; --bad:#b42318; --badbg:#fde8e6; --done:#4b5563; --donebg:#eceef1; }
+  * { box-sizing:border-box }
+  body { margin:0; font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--tx) }
+  header { background:#16325c; color:#fff; padding:12px 16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap }
+  header h1 { font-size:17px; margin:0; flex:1 }
+  header small { opacity:.8 }
+  main { max-width:1150px; margin:0 auto; padding:16px }
+  button, .btn { font:inherit; border:1px solid var(--bd); background:#fff; color:var(--tx); padding:7px 12px; border-radius:6px; cursor:pointer }
+  button.pri { background:var(--pri); border-color:var(--pri); color:#fff }
+  button.lnk { border:0; background:none; color:var(--pri); padding:0 }
+  header button { background:transparent; color:#fff; border-color:#ffffff55 }
+  input, select, textarea { font:inherit; padding:7px 9px; border:1px solid var(--bd); border-radius:6px; width:100%; background:#fff; color:var(--tx) }
+  label { display:block; font-size:12px; color:var(--mut); margin:8px 0 3px }
+  .card { background:var(--card); border:1px solid var(--bd); border-radius:10px; padding:16px; margin-bottom:14px }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px }
+  .kpi { background:var(--card); border:1px solid var(--bd); border-radius:10px; padding:12px 14px }
+  .kpi b { display:block; font-size:24px }
+  .kpi span { color:var(--mut); font-size:12px }
+  .bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px }
+  .bar input, .bar select { width:auto; min-width:160px }
+  table { width:100%; border-collapse:collapse }
+  th, td { text-align:left; padding:9px 8px; border-bottom:1px solid var(--bd); vertical-align:top }
+  th { font-size:12px; color:var(--mut); font-weight:600 }
+  tr.click { cursor:pointer } tr.click:hover { background:#f0f4fb }
+  .tag { display:inline-block; padding:2px 9px; border-radius:99px; font-size:12px; font-weight:600; white-space:nowrap }
+  .ok { background:var(--okbg); color:var(--ok) } .warn { background:var(--warnbg); color:var(--warn) }
+  .bad { background:var(--badbg); color:var(--bad) } .done { background:var(--donebg); color:var(--done) }
+  .prog { height:7px; background:#e8ebf0; border-radius:9px; overflow:hidden; min-width:90px; margin-top:4px }
+  .prog i { display:block; height:100%; background:var(--pri) }
+  .mut { color:var(--mut); font-size:12px }
+  .grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:10px }
+  .steps td.n { width:30px; font-weight:700; color:var(--mut) }
+  .steps tr.cur { background:#eef4ff }
+  .demo { background:#fff3d6; color:#7a4d00; padding:8px 16px; font-size:13px; text-align:center }
+  .wrap { overflow-x:auto }
+  dialog { border:1px solid var(--bd); border-radius:10px; padding:18px; width:min(460px,92vw) }
+  dialog::backdrop { background:#0006 }
+  .row { display:flex; gap:8px; justify-content:flex-end; margin-top:14px }
+  .hide { display:none !important }
+  @media (max-width:640px){ .hide-sm { display:none } }
+</style>
+</head>
+<body>
+<div id="demo" class="demo hide">Modo demonstração: dados ficam só neste navegador. Preencha o <code>config.js</code> com o Supabase para uso real.</div>
+<header>
+  <h1>Acompanhamento — Dívida Ativa</h1>
+  <small id="who"></small>
+  <button id="btnSair" class="hide">Sair</button>
+</header>
+
+<main>
+  <!-- LOGIN -->
+  <section id="vLogin" class="card hide" style="max-width:380px;margin:40px auto">
+    <h3 style="margin-top:0">Entrar</h3>
+    <form id="fLogin">
+      <label>E-mail</label><input name="email" type="email" required>
+      <label>Senha</label><input name="senha" type="password" required>
+      <div class="row"><button class="pri">Entrar</button></div>
+      <p id="loginErr" class="mut" style="color:var(--bad)"></p>
+    </form>
+  </section>
+
+  <!-- PAINEL -->
+  <section id="vLista" class="hide">
+    <div class="kpis" id="kpis"></div>
+    <div class="bar">
+      <input id="busca" placeholder="Buscar município…">
+      <select id="filtro">
+        <option value="">Todos os status</option>
+        <option>Atrasado</option><option>Atenção</option><option>No prazo</option><option>Concluído</option>
+      </select>
+      <span style="flex:1"></span>
+      <button class="pri" id="btnNovo">+ Novo processo</button>
+    </div>
+    <div class="card wrap" style="padding:6px 10px">
+      <table>
+        <thead><tr><th>Município</th><th>Etapa atual</th><th>Status</th><th class="hide-sm">Na etapa</th><th class="hide-sm">Previsão término</th><th class="hide-sm">Desvio</th></tr></thead>
+        <tbody id="tbLista"></tbody>
+      </table>
+      <p id="vazio" class="mut hide" style="padding:10px">Nenhum processo cadastrado.</p>
+    </div>
+  </section>
+
+  <!-- DETALHE -->
+  <section id="vDet" class="hide">
+    <div class="bar"><button id="btnVoltar">← Voltar</button><span style="flex:1"></span><button id="btnExcluir">Excluir processo</button></div>
+    <div class="card">
+      <div class="bar" style="margin:0"><h2 id="dTitulo" style="margin:0;flex:1"></h2><span id="dStatus"></span></div>
+      <div class="grid2" id="dResumo" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Marcar etapa em andamento</h3>
+      <form id="fMarcar" class="grid2">
+        <div><label>Etapa em que estamos</label><select name="etapa" id="selEtapa"></select></div>
+        <div><label>Desde o dia</label><input name="data" type="date" required></div>
+        <div style="grid-column:1/-1"><label>Observação (opcional)</label><input name="obs" maxlength="300"></div>
+        <div style="grid-column:1/-1" class="row"><button class="pri">Registrar</button></div>
+      </form>
+    </div>
+    <div class="card wrap">
+      <h3 style="margin-top:0">Etapas — previsto x realizado</h3>
+      <table class="steps"><thead><tr><th></th><th>Etapa</th><th>Prazo</th><th>Previsto</th><th>Realizado</th><th>Situação</th></tr></thead><tbody id="tbEtapas"></tbody></table>
+    </div>
+    <div class="card wrap">
+      <h3 style="margin-top:0">Histórico de marcações</h3>
+      <table><thead><tr><th>Etapa</th><th>Desde</th><th>Registrado em</th><th>Por</th><th>Obs.</th><th></th></tr></thead><tbody id="tbHist"></tbody></table>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlgNovo">
+  <form id="fNovo">
+    <h3 style="margin-top:0">Novo processo</h3>
+    <label>Município</label><input name="municipio" required>
+    <label>Data de início (etapa 1)</label><input name="data_inicio" type="date" required>
+    <label>Observação</label><input name="observacao">
+    <div class="row"><button type="button" onclick="dlgNovo.close()">Cancelar</button><button class="pri">Criar</button></div>
+  </form>
+</dialog>
+
+<script>
+const C = window.CONFIG, ET = C.ETAPAS, N = ET.length, FIM = N + 1;
+const DEMO = !C.SUPABASE_URL;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- Datas ---------- */
+const DAY = 864e5;
+const parse = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); };
+const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const br = d => d ? d.toLocaleDateString("pt-BR") : "—";
+const hoje = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
+const util = d => d.getDay() % 6 !== 0;
+function addDias(d, n) {
+  if (!C.DIAS_UTEIS) return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  const r = new Date(d); while (n > 0) { r.setDate(r.getDate() + 1); if (util(r)) n--; } return r;
+}
+function diff(a, b) { // dias de a até b
+  if (!C.DIAS_UTEIS) return Math.round((b - a) / DAY);
+  let n = 0, s = Math.sign(b - a), r = new Date(a);
+  while (iso(r) !== iso(b)) { r.setDate(r.getDate() + s); if (util(r)) n += s; } return n;
+}
+const somaDias = (de, ate) => ET.slice(de - 1, ate - 1).reduce((t, e) => t + e.dias, 0);
+
+/* ---------- Dados (Supabase ou localStorage) ---------- */
+let sb;
+const local = {
+  get(k) { try { return JSON.parse(localStorage.getItem("da_" + k)) || []; } catch { return []; } },
+  set(k, v) { try { localStorage.setItem("da_" + k, JSON.stringify(v)); } catch {} },
+};
+const db = {
+  async processos() {
+    if (DEMO) return local.get("processos");
+    const { data, error } = await sb.from("processos").select("*").order("municipio"); if (error) throw error; return data;
+  },
+  async marcacoes() {
+    if (DEMO) return local.get("marcacoes");
+    const { data, error } = await sb.from("marcacoes").select("*"); if (error) throw error; return data;
+  },
+  async addProcesso(p) {
+    if (DEMO) { const a = local.get("processos"); a.push({ ...p, id: crypto.randomUUID(), created_at: new Date().toISOString() }); return local.set("processos", a); }
+    const { error } = await sb.from("processos").insert(p); if (error) throw error;
+  },
+  async delProcesso(id) {
+    if (DEMO) { local.set("processos", local.get("processos").filter(p => p.id !== id)); return local.set("marcacoes", local.get("marcacoes").filter(m => m.processo_id !== id)); }
+    const { error } = await sb.from("processos").delete().eq("id", id); if (error) throw error;
+  },
+  async addMarcacao(m) {
+    if (DEMO) { const a = local.get("marcacoes"); a.push({ ...m, id: Date.now(), usuario: "demo", registrado_em: new Date().toISOString() }); return local.set("marcacoes", a); }
+    const { error } = await sb.from("marcacoes").insert(m); if (error) throw error;
+  },
+  async delMarcacao(id) {
+    if (DEMO) return local.set("marcacoes", local.get("marcacoes").filter(m => m.id !== id));
+    const { error } = await sb.from("marcacoes").delete().eq("id", id); if (error) throw error;
+  },
+};
+
+/* ---------- Cálculo de situação ---------- */
+function calcular(p, todas) {
+  const ms = todas.filter(m => m.processo_id === p.id)
+    .sort((a, b) => a.data.localeCompare(b.data) || a.registrado_em.localeCompare(b.registrado_em));
+  const ini = parse(p.data_inicio), h = hoje();
+  // início real de cada etapa = marcação mais recente daquela etapa
+  const inicioReal = {}; inicioReal[1] = ini;
+  ms.forEach(m => inicioReal[m.etapa] = parse(m.data));
+  const ult = ms[ms.length - 1];
+  const atual = ult ? ult.etapa : 1;
+  const desde = ult ? parse(ult.data) : ini;
+  const fimPlanejado = addDias(ini, somaDias(1, FIM));
+  // previsto (linha de base)
+  const linhas = ET.map(e => {
+    const pIni = addDias(ini, somaDias(1, e.n)), pFim = addDias(pIni, e.dias);
+    const rIni = e.n <= atual ? (inicioReal[e.n] || null) : null;
+    let rFim = null;
+    if (e.n < atual) { for (let k = e.n + 1; k <= FIM; k++) if (inicioReal[k]) { rFim = inicioReal[k]; break; } }
+    return { ...e, pIni, pFim, rIni, rFim };
+  });
+  if (atual >= FIM) {
+    const fim = desde, desvio = diff(fimPlanejado, fim);
+    return { p, ms, linhas, atual, desde, concluido: true, status: "Concluído", cls: "done", prevFim: fim, fimPlanejado, desvio, progresso: 100 };
+  }
+  const et = ET[atual - 1];
+  const prazo = addDias(desde, et.dias);
+  const naEtapa = diff(desde, h);
+  const resta = diff(h, prazo);
+  const prevFim = addDias(prazo > h ? prazo : h, somaDias(atual + 1, FIM));
+  const desvio = diff(fimPlanejado, prevFim);
+  let status = "No prazo", cls = "ok";
+  if (resta < 0) { status = "Atrasado"; cls = "bad"; }
+  else if (resta <= C.DIAS_ALERTA) { status = "Atenção"; cls = "warn"; }
+  const progresso = Math.round(100 * (somaDias(1, atual) + Math.min(naEtapa, et.dias)) / somaDias(1, FIM));
+  return { p, ms, linhas, atual, et, desde, prazo, naEtapa, resta, prevFim, fimPlanejado, desvio, status, cls, progresso };
+}
+const desvioTxt = d => d > 0 ? `<span style="color:var(--bad)">+${d} dias</span>` : d < 0 ? `<span style="color:var(--ok)">${d} dias</span>` : "0";
+const unid = C.DIAS_UTEIS ? "dias úteis" : "dias";
+
+/* ---------- Render ---------- */
+let cache = { procs: [], marcs: [] }, abertoId = null;
+async function carregar() {
+  [cache.procs, cache.marcs] = await Promise.all([db.processos(), db.marcacoes()]);
+  abertoId ? detalhe(abertoId) : lista();
+}
+function mostrar(v) { ["vLogin","vLista","vDet"].forEach(x => $("#"+x).classList.toggle("hide", x !== v)); }
+
+function lista() {
+  abertoId = null; mostrar("vLista");
+  const rs = cache.procs.map(p => calcular(p, cache.marcs));
+  const cnt = s => rs.filter(r => r.status === s).length;
+  $("#kpis").innerHTML = [
+    ["Processos", rs.length], ["Atrasados", cnt("Atrasado")], ["Atenção", cnt("Atenção")],
+    ["No prazo", cnt("No prazo")], ["Concluídos", cnt("Concluído")],
+  ].map(([t, v]) => `<div class="kpi"><b>${v}</b><span>${t}</span></div>`).join("");
+  const q = $("#busca").value.toLowerCase(), f = $("#filtro").value;
+  const ordem = { Atrasado: 0, "Atenção": 1, "No prazo": 2, "Concluído": 3 };
+  const vis = rs.filter(r => r.p.municipio.toLowerCase().includes(q) && (!f || r.status === f))
+    .sort((a, b) => ordem[a.status] - ordem[b.status] || b.desvio - a.desvio);
+  $("#vazio").classList.toggle("hide", vis.length > 0);
+  $("#tbLista").innerHTML = vis.map(r => `
+    <tr class="click" data-id="${r.p.id}">
+      <td><b>${esc(r.p.municipio)}</b><div class="mut">início ${br(parse(r.p.data_inicio))}</div></td>
+      <td>${r.concluido ? "Concluído" : `${r.atual}/${N} · ${esc(r.et.nome)}`}<div class="prog"><i style="width:${r.progresso}%"></i></div></td>
+      <td><span class="tag ${r.cls}">${r.status}</span>${!r.concluido && r.resta < 0 ? `<div class="mut">${-r.resta} ${unid} além do prazo</div>` : ""}</td>
+      <td class="hide-sm">${r.concluido ? "—" : `${r.naEtapa} de ${r.et.dias} ${unid}<div class="mut">desde ${br(r.desde)}</div>`}</td>
+      <td class="hide-sm">${br(r.prevFim)}<div class="mut">planejado ${br(r.fimPlanejado)}</div></td>
+      <td class="hide-sm">${desvioTxt(r.desvio)}</td>
+    </tr>`).join("");
+}
+
+function detalhe(id) {
+  const p = cache.procs.find(x => x.id === id); if (!p) return lista();
+  abertoId = id; mostrar("vDet");
+  const r = calcular(p, cache.marcs);
+  $("#dTitulo").textContent = p.municipio;
+  $("#dStatus").innerHTML = `<span class="tag ${r.cls}">${r.status}</span>`;
+  const it = (t, v) => `<div><div class="mut">${t}</div><b>${v}</b></div>`;
+  $("#dResumo").innerHTML = [
+    it("Etapa atual", r.concluido ? "Processo concluído" : `${r.atual}/${N} — ${esc(r.et.nome)}`),
+    r.concluido ? it("Concluído em", br(r.desde)) : it("Na etapa desde", `${br(r.desde)} (${r.naEtapa} ${unid})`),
+    r.concluido ? "" : it("Prazo da etapa", `${br(r.prazo)} · ${r.resta >= 0 ? `faltam ${r.resta}` : `${-r.resta} de atraso`}`),
+    it("Término previsto x planejado", `${br(r.prevFim)} x ${br(r.fimPlanejado)}`),
+    it("Desvio no prazo final", desvioTxt(r.desvio)),
+    it("Início / progresso", `${br(parse(p.data_inicio))} · ${r.progresso}%`),
+    p.observacao ? it("Observação", esc(p.observacao)) : "",
+  ].join("");
+  $("#selEtapa").innerHTML = ET.map(e => `<option value="${e.n}">${e.n}. ${esc(e.nome)}</option>`).join("") + `<option value="${FIM}">✔ Processo concluído</option>`;
+  $("#selEtapa").value = Math.min(r.atual + (r.ms.length ? 1 : 0), FIM);
+  $("#fMarcar").data.value = iso(hoje());
+  $("#tbEtapas").innerHTML = r.linhas.map(l => {
+    let sit = "", dur = "";
+    if (l.rIni && l.rFim) {
+      const d = diff(l.rIni, l.rFim), x = d - l.dias;
+      dur = `${br(l.rIni)} → ${br(l.rFim)}<div class="mut">${d} ${unid}</div>`;
+      sit = x > 0 ? `<span class="tag bad">+${x} ${unid}</span>` : `<span class="tag ok">Concluída${x < 0 ? ` (${x})` : ""}</span>`;
+    } else if (l.n === r.atual && !r.concluido) {
+      dur = `${br(l.rIni)} → em andamento<div class="mut">${r.naEtapa} ${unid}</div>`;
+      sit = `<span class="tag ${r.cls}">${r.status}</span>`;
+    } else if (l.n < r.atual) { dur = "—"; sit = `<span class="tag done">Pulada/sem registro</span>`; }
+    else { dur = "—"; sit = `<span class="mut">Aguardando</span>`; }
+    return `<tr class="${l.n === r.atual && !r.concluido ? "cur" : ""}"><td class="n">${l.n}</td>
+      <td>${esc(l.nome)}<div class="mut">${l.fase}${l.estimado ? " · prazo estimado" : ""}</div></td>
+      <td>${l.dias}</td><td>${br(l.pIni)} → ${br(l.pFim)}</td><td>${dur}</td><td>${sit}</td></tr>`;
+  }).join("");
+  $("#tbHist").innerHTML = [...r.ms].reverse().map(m => `<tr>
+      <td>${m.etapa >= FIM ? "Concluído" : m.etapa + ". " + esc(ET[m.etapa-1].nome)}</td>
+      <td>${br(parse(m.data))}</td><td>${new Date(m.registrado_em).toLocaleString("pt-BR")}</td>
+      <td>${esc(m.usuario)}</td><td>${esc(m.observacao)}</td>
+      <td><button class="lnk" data-del="${m.id}">desfazer</button></td></tr>`).join("")
+    || `<tr><td colspan="6" class="mut">Nenhuma marcação ainda — etapa 1 conta a partir da data de início.</td></tr>`;
+}
+
+/* ---------- Eventos ---------- */
+const tentar = fn => async (...a) => { try { await fn(...a); } catch (e) { alert("Erro: " + (e.message || e)); } };
+$("#tbLista").onclick = e => { const tr = e.target.closest("tr[data-id]"); if (tr) detalhe(tr.dataset.id); };
+$("#busca").oninput = lista; $("#filtro").onchange = lista;
+$("#btnVoltar").onclick = lista;
+$("#btnNovo").onclick = () => { $("#fNovo").reset(); $("#fNovo").data_inicio.value = iso(hoje()); dlgNovo.showModal(); };
+$("#fNovo").onsubmit = tentar(async e => {
+  e.preventDefault(); const f = e.target;
+  await db.addProcesso({ municipio: f.municipio.value.trim(), data_inicio: f.data_inicio.value, observacao: f.observacao.value || null });
+  dlgNovo.close(); await carregar();
+});
+$("#fMarcar").onsubmit = tentar(async e => {
+  e.preventDefault(); const f = e.target;
+  await db.addMarcacao({ processo_id: abertoId, etapa: +f.etapa.value, data: f.data.value, observacao: f.obs.value || null });
+  f.obs.value = ""; await carregar();
+});
+$("#tbHist").onclick = tentar(async e => {
+  const id = e.target.dataset.del; if (!id || !confirm("Desfazer esta marcação?")) return;
+  await db.delMarcacao(isNaN(id) ? id : +id); await carregar();
+});
+$("#btnExcluir").onclick = tentar(async () => {
+  if (!confirm("Excluir este processo e todo o histórico?")) return;
+  await db.delProcesso(abertoId); abertoId = null; await carregar();
+});
+
+/* ---------- Início / login ---------- */
+async function iniciar() {
+  if (DEMO) { $("#demo").classList.remove("hide"); return carregar(); }
+  sb = supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY);
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return mostrar("vLogin");
+  $("#who").textContent = session.user.email; $("#btnSair").classList.remove("hide");
+  await carregar();
+}
+$("#fLogin").onsubmit = async e => {
+  e.preventDefault(); const f = e.target;
+  const { error } = await sb.auth.signInWithPassword({ email: f.email.value, password: f.senha.value });
+  if (error) $("#loginErr").textContent = "E-mail ou senha inválidos."; else tentar(iniciar)();
+};
+$("#btnSair").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+tentar(iniciar)();
+</script>
+</body>
+</html>
