@@ -3,132 +3,245 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Acompanhamento Dívida Ativa</title>
+<title>Gestão de Dívida Ativa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
-  :root { --bg:#f5f6f8; --card:#fff; --tx:#1d2330; --mut:#6b7280; --bd:#e3e6eb; --pri:#1f5fbf;
-          --ok:#1a7f45; --okbg:#e3f5ea; --warn:#9a6200; --warnbg:#fff3d6; --bad:#b42318; --badbg:#fde8e6; --done:#4b5563; --donebg:#eceef1; }
+  :root {
+    --bg:#f3f5f8; --card:#fff; --tx:#1b2433; --tx2:#475467; --mut:#7a8699; --bd:#e4e8ee; --bd2:#eef1f5;
+    --nav:#14233b; --pri:#24518f; --prih:#1c4277; --pribg:#e9eff8;
+    --ok:#18794e; --okbg:#e6f4ec; --warn:#a15c00; --warnbg:#fdf1dc; --bad:#b42318; --badbg:#fcebe9;
+    --done:#475467; --donebg:#eef1f5; --r:10px;
+  }
   * { box-sizing:border-box }
-  body { margin:0; font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--tx) }
-  header { background:#16325c; color:#fff; padding:12px 16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap }
-  header h1 { font-size:17px; margin:0; flex:1 }
-  header small { opacity:.8 }
-  main { max-width:1150px; margin:0 auto; padding:16px }
-  button, .btn { font:inherit; border:1px solid var(--bd); background:#fff; color:var(--tx); padding:7px 12px; border-radius:6px; cursor:pointer }
+  body { margin:0; font:14px/1.5 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--tx); -webkit-font-smoothing:antialiased }
+  svg.i { width:18px; height:18px; fill:currentColor; flex:none; vertical-align:middle }
+  svg.i.s { width:15px; height:15px }
+
+  /* topo */
+  header { background:var(--nav); color:#fff }
+  .top { max-width:1180px; margin:0 auto; padding:12px 16px; display:flex; align-items:center; gap:12px }
+  .logo { width:36px; height:36px; border-radius:8px; background:var(--pri); display:grid; place-items:center }
+  .logo svg { width:20px; height:20px }
+  .brand { flex:1; line-height:1.2 }
+  .brand b { display:block; font-size:15px; font-weight:600 }
+  .brand span { font-size:12px; color:#a9b6ca }
+  .chip { display:flex; align-items:center; gap:6px; font-size:13px; color:#d5dde9 }
+  .iconbtn { background:transparent; border:0; color:#d5dde9; padding:7px; border-radius:6px; cursor:pointer; display:grid; place-items:center }
+  .iconbtn:hover { background:#ffffff14; color:#fff }
+  .demo { background:var(--warnbg); color:var(--warn); padding:8px 16px; font-size:13px; display:flex; gap:8px; align-items:center; justify-content:center }
+
+  main { max-width:1180px; margin:0 auto; padding:20px 16px 40px }
+  h2 { font-size:20px; font-weight:600; margin:0 }
+  h3 { font-size:15px; font-weight:600; margin:0; display:flex; align-items:center; gap:8px }
+  h3 svg { color:var(--pri) }
+
+  /* botões e campos */
+  button { font:inherit; font-weight:500; display:inline-flex; align-items:center; gap:6px; border:1px solid var(--bd); background:#fff; color:var(--tx); padding:8px 14px; border-radius:7px; cursor:pointer; transition:background .12s,border-color .12s }
+  button:hover { background:#f6f8fb; border-color:#d3d9e2 }
   button.pri { background:var(--pri); border-color:var(--pri); color:#fff }
-  button.lnk { border:0; background:none; color:var(--pri); padding:0 }
-  button.del { color:var(--bad); border-color:#f3c3be }
-  button.del:hover { background:var(--badbg) }
-  button.sm { padding:3px 9px; font-size:12px }
-  header button { background:transparent; color:#fff; border-color:#ffffff55 }
-  input, select, textarea { font:inherit; padding:7px 9px; border:1px solid var(--bd); border-radius:6px; width:100%; background:#fff; color:var(--tx) }
-  label { display:block; font-size:12px; color:var(--mut); margin:8px 0 3px }
-  .card { background:var(--card); border:1px solid var(--bd); border-radius:10px; padding:16px; margin-bottom:14px }
-  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px }
-  .kpi { background:var(--card); border:1px solid var(--bd); border-radius:10px; padding:12px 14px }
-  .kpi b { display:block; font-size:24px }
-  .kpi span { color:var(--mut); font-size:12px }
-  .bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px }
-  .bar input, .bar select { width:auto; min-width:160px }
+  button.pri:hover { background:var(--prih) }
+  button.del { color:var(--bad) }
+  button.del:hover { background:var(--badbg); border-color:#f1c6c0 }
+  button.sm { padding:5px 10px; font-size:12.5px }
+  button.ghost { border-color:transparent; background:transparent; color:var(--tx2) }
+  button.ghost:hover { background:#e9edf2 }
+  input, select, textarea { font:inherit; padding:8px 11px; border:1px solid var(--bd); border-radius:7px; width:100%; background:#fff; color:var(--tx); outline:none }
+  input:focus, select:focus { border-color:var(--pri); box-shadow:0 0 0 3px var(--pribg) }
+  label { display:block; font-size:12.5px; font-weight:500; color:var(--tx2); margin:10px 0 4px }
+
+  .card { background:var(--card); border:1px solid var(--bd); border-radius:var(--r); padding:18px 20px; margin-bottom:16px }
+  .card-h { display:flex; align-items:center; gap:10px; margin-bottom:14px }
+  .card-h h3 { flex:1 }
+  .mut { color:var(--mut); font-size:12.5px }
+  .bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px }
+  .sp { flex:1 }
+
+  /* indicadores */
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:18px }
+  .kpi { background:var(--card); border:1px solid var(--bd); border-radius:var(--r); padding:14px 16px; display:flex; gap:12px; align-items:center; cursor:pointer; transition:border-color .12s }
+  .kpi:hover, .kpi.on { border-color:var(--pri) }
+  .kpi .ic { width:40px; height:40px; border-radius:9px; display:grid; place-items:center; flex:none }
+  .kpi b { display:block; font-size:22px; font-weight:700; line-height:1.1 }
+  .kpi span { color:var(--mut); font-size:12.5px }
+  .ic.all { background:var(--pribg); color:var(--pri) } .ic.bad { background:var(--badbg); color:var(--bad) }
+  .ic.warn { background:var(--warnbg); color:var(--warn) } .ic.ok { background:var(--okbg); color:var(--ok) }
+  .ic.done { background:var(--donebg); color:var(--done) }
+
+  .search { position:relative; flex:1; max-width:340px; min-width:200px }
+  .search svg { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--mut) }
+  .search input { padding-left:34px }
+  .bar select { width:auto; min-width:170px }
+
+  /* tabelas */
+  .tbl { background:var(--card); border:1px solid var(--bd); border-radius:var(--r); overflow:hidden }
+  .wrap { overflow-x:auto }
   table { width:100%; border-collapse:collapse }
-  th, td { text-align:left; padding:9px 8px; border-bottom:1px solid var(--bd); vertical-align:top }
-  th { font-size:12px; color:var(--mut); font-weight:600 }
-  tr.click { cursor:pointer } tr.click:hover { background:#f0f4fb }
-  .tag { display:inline-block; padding:2px 9px; border-radius:99px; font-size:12px; font-weight:600; white-space:nowrap }
+  th, td { text-align:left; padding:12px 14px; border-bottom:1px solid var(--bd2); vertical-align:middle }
+  th { font-size:11.5px; color:var(--mut); font-weight:600; text-transform:uppercase; letter-spacing:.04em; background:#fafbfc }
+  tbody tr:last-child td { border-bottom:0 }
+  tr.click { cursor:pointer } tr.click:hover td { background:#f7f9fc }
+  .nm { font-weight:600 }
+  .tag { display:inline-flex; align-items:center; gap:5px; padding:3px 10px 3px 8px; border-radius:99px; font-size:12px; font-weight:600; white-space:nowrap }
+  .tag svg { width:14px; height:14px; fill:currentColor }
   .ok { background:var(--okbg); color:var(--ok) } .warn { background:var(--warnbg); color:var(--warn) }
   .bad { background:var(--badbg); color:var(--bad) } .done { background:var(--donebg); color:var(--done) }
-  .prog { height:7px; background:#e8ebf0; border-radius:9px; overflow:hidden; min-width:90px; margin-top:4px }
-  .prog i { display:block; height:100%; background:var(--pri) }
-  .mut { color:var(--mut); font-size:12px }
-  .grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:10px }
-  .steps td.n { width:30px; font-weight:700; color:var(--mut) }
-  .steps tr.cur { background:#eef4ff }
-  .demo { background:#fff3d6; color:#7a4d00; padding:8px 16px; font-size:13px; text-align:center }
-  .wrap { overflow-x:auto }
-  dialog { border:1px solid var(--bd); border-radius:10px; padding:18px; width:min(460px,92vw) }
-  dialog::backdrop { background:#0006 }
-  .row { display:flex; gap:8px; justify-content:flex-end; margin-top:14px }
+  .prog { height:6px; background:#e8ecf1; border-radius:9px; overflow:hidden; min-width:100px; margin-top:7px }
+  .prog i { display:block; height:100%; background:var(--pri); border-radius:9px }
+  .pos { color:var(--bad); font-weight:600 } .neg { color:var(--ok); font-weight:600 }
+
+  /* detalhe */
+  .det-h { display:flex; align-items:center; gap:12px; flex-wrap:wrap }
+  .det-h h2 { flex:1 }
+  .resumo { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-top:16px }
+  .stat { display:flex; gap:10px; align-items:flex-start; padding:12px; border:1px solid var(--bd2); border-radius:8px; background:#fafbfc }
+  .stat svg { color:var(--pri); margin-top:2px }
+  .stat .mut { display:block } .stat b { font-weight:600; font-size:13.5px }
+  .form { display:grid; grid-template-columns:2fr 1fr; gap:0 14px }
+  .form .full { grid-column:1/-1 }
+  .steps td { padding:11px 14px }
+  .steps tr.cur td { background:#f2f6fc }
+  .num { width:28px; height:28px; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:700; background:var(--donebg); color:var(--mut) }
+  .num svg { width:16px; height:16px; fill:#fff }
+  .num.ok { background:var(--ok) } .num.late { background:var(--bad) } .num.cur { background:var(--pri); color:#fff }
+  .num.skip { background:#c3cad4; color:#fff }
+  .fase { display:inline-block; font-size:11px; font-weight:600; color:var(--tx2); background:var(--bd2); padding:1px 7px; border-radius:4px; margin-top:3px }
+  .est { color:var(--warn); font-size:11.5px; margin-left:6px }
+  .empty { padding:28px; text-align:center; color:var(--mut) }
+  .empty svg { width:34px; height:34px; color:#c3cad4; display:block; margin:0 auto 6px }
+
+  /* login e diálogo */
+  .login { max-width:380px; margin:60px auto; text-align:center }
+  .login .logo { width:52px; height:52px; margin:0 auto 12px; border-radius:12px }
+  .login .logo svg { width:28px; height:28px; fill:#fff }
+  .login form { text-align:left }
+  dialog { border:0; border-radius:12px; padding:22px; width:min(460px,92vw); box-shadow:0 20px 50px #0f172a40 }
+  dialog::backdrop { background:#0f172a80 }
+  .row { display:flex; gap:8px; justify-content:flex-end; margin-top:18px }
   .hide { display:none !important }
-  @media (max-width:640px){ .hide-sm { display:none } }
+  @media (max-width:720px) { .hide-sm { display:none } .form { grid-template-columns:1fr } .chip span { display:none } }
 </style>
 </head>
 <body>
-<div id="demo" class="demo hide">Modo demonstração: dados ficam só neste navegador. Preencha o <code>config.js</code> com o Supabase para uso real.</div>
+<!-- Ícones (sólidos, estilo Material) -->
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-bank" viewBox="0 0 24 24"><path d="M4 10v7h3v-7H4zm6 0v7h3v-7h-3zM2 22h19v-3H2v3zm14-12v7h3v-7h-3zm-4.5-9L2 6v2h19V6l-9.5-5z"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.2 14.2L11 13V7h1.5v5.2l4.5 2.7-.8 1.3z"/></symbol>
+  <symbol id="i-okc" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></symbol>
+  <symbol id="i-sweep" viewBox="0 0 24 24"><path d="M15 16h4v2h-4zm0-8h7v2h-7zm0 4h6v2h-6zM3 18c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2V8H3v10zM14 5h-3l-1-1H6L5 5H2v2h12z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="m17 7-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M14.4 6 14 4H5v17h2v-7h5.6l.4 2h7V6z"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V10h14v10zM7 12h5v5H7z"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24"><path d="m16 6 2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></symbol>
+  <symbol id="i-hist" viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></symbol>
+</svg>
+
+<div id="demo" class="demo hide"><svg class="i s"><use href="#i-warn"/></svg>Modo demonstração: os dados ficam só neste navegador.</div>
 <header>
-  <h1>Acompanhamento — Dívida Ativa</h1>
-  <small id="who"></small>
-  <button id="btnSair" class="hide">Sair</button>
+  <div class="top">
+    <div class="logo"><svg class="i"><use href="#i-bank"/></svg></div>
+    <div class="brand"><b>Gestão de Dívida Ativa</b><span>Acompanhamento de etapas e prazos</span></div>
+    <div class="chip hide" id="whoBox"><svg class="i s"><use href="#i-user"/></svg><span id="who"></span></div>
+    <button id="btnSair" class="iconbtn hide" title="Sair"><svg class="i"><use href="#i-logout"/></svg></button>
+  </div>
 </header>
 
 <main>
   <!-- LOGIN -->
-  <section id="vLogin" class="card hide" style="max-width:380px;margin:40px auto">
-    <h3 style="margin-top:0">Entrar</h3>
-    <form id="fLogin">
-      <label>E-mail</label><input name="email" type="email" required>
-      <label>Senha</label><input name="senha" type="password" required>
-      <div class="row"><button class="pri">Entrar</button></div>
-      <p id="loginErr" class="mut" style="color:var(--bad)"></p>
-    </form>
+  <section id="vLogin" class="hide">
+    <div class="card login">
+      <div class="logo"><svg class="i"><use href="#i-bank"/></svg></div>
+      <h2>Gestão de Dívida Ativa</h2>
+      <p class="mut" style="margin:4px 0 8px">Entre com seu e-mail e senha</p>
+      <form id="fLogin">
+        <label>E-mail</label><input name="email" type="email" required autocomplete="username">
+        <label>Senha</label><input name="senha" type="password" required autocomplete="current-password">
+        <button class="pri" style="width:100%;justify-content:center;margin-top:18px">Entrar</button>
+        <p id="loginErr" class="mut" style="color:var(--bad);text-align:center"></p>
+      </form>
+    </div>
   </section>
 
   <!-- PAINEL -->
   <section id="vLista" class="hide">
     <div class="kpis" id="kpis"></div>
     <div class="bar">
-      <input id="busca" placeholder="Buscar município…">
+      <div class="search"><svg class="i s"><use href="#i-search"/></svg><input id="busca" placeholder="Buscar município"></div>
       <select id="filtro">
         <option value="">Todos os status</option>
         <option>Atrasado</option><option>Atenção</option><option>No prazo</option><option>Concluído</option>
       </select>
-      <span style="flex:1"></span>
-      <button class="pri" id="btnNovo">+ Novo processo</button>
+      <span class="sp"></span>
+      <button class="pri" id="btnNovo"><svg class="i s"><use href="#i-plus"/></svg>Novo processo</button>
     </div>
-    <div class="card wrap" style="padding:6px 10px">
+    <div class="tbl wrap">
       <table>
-        <thead><tr><th>Município</th><th>Etapa atual</th><th>Status</th><th class="hide-sm">Na etapa</th><th class="hide-sm">Previsão término</th><th class="hide-sm">Desvio</th></tr></thead>
+        <thead><tr><th>Município</th><th>Etapa atual</th><th>Status</th><th class="hide-sm">Na etapa</th><th class="hide-sm">Término previsto</th><th class="hide-sm">Desvio</th></tr></thead>
         <tbody id="tbLista"></tbody>
       </table>
-      <p id="vazio" class="mut hide" style="padding:10px">Nenhum processo cadastrado.</p>
+      <div id="vazio" class="empty hide"><svg class="i"><use href="#i-folder"/></svg>Nenhum processo encontrado.</div>
     </div>
   </section>
 
   <!-- DETALHE -->
   <section id="vDet" class="hide">
-    <div class="bar"><button id="btnVoltar">← Voltar</button><span style="flex:1"></span><button id="btnEditar">✏️ Editar processo</button><button id="btnExcluir" class="del">🗑 Excluir processo</button></div>
-    <div class="card">
-      <div class="bar" style="margin:0"><h2 id="dTitulo" style="margin:0;flex:1"></h2><span id="dStatus"></span></div>
-      <div class="grid2" id="dResumo" style="margin-top:10px"></div>
+    <div class="bar">
+      <button id="btnVoltar" class="ghost"><svg class="i s"><use href="#i-back"/></svg>Voltar</button>
+      <span class="sp"></span>
+      <button id="btnEditar"><svg class="i s"><use href="#i-edit"/></svg>Editar</button>
+      <button id="btnExcluir" class="del"><svg class="i s"><use href="#i-trash"/></svg>Excluir processo</button>
     </div>
     <div class="card">
-      <h3 style="margin-top:0">Marcar etapa em andamento</h3>
-      <form id="fMarcar" class="grid2">
+      <div class="det-h"><h2 id="dTitulo"></h2><span id="dStatus"></span></div>
+      <div class="prog" style="margin-top:12px;height:8px"><i id="dProg"></i></div>
+      <div class="resumo" id="dResumo"></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3><svg class="i"><use href="#i-flag"/></svg>Marcar etapa em andamento</h3></div>
+      <form id="fMarcar" class="form">
         <div><label>Etapa em que estamos</label><select name="etapa" id="selEtapa"></select></div>
         <div><label>Desde o dia</label><input name="data" type="date" required></div>
-        <div style="grid-column:1/-1"><label>Observação (opcional)</label><input name="obs" maxlength="300"></div>
-        <div style="grid-column:1/-1" class="row"><button class="pri">Registrar</button></div>
+        <div class="full"><label>Observação (opcional)</label><input name="obs" maxlength="300"></div>
+        <div class="full row"><button class="pri"><svg class="i s"><use href="#i-check"/></svg>Registrar</button></div>
       </form>
     </div>
-    <div class="card wrap">
-      <h3 style="margin-top:0">Etapas — previsto x realizado</h3>
-      <table class="steps"><thead><tr><th></th><th>Etapa</th><th>Prazo</th><th>Previsto</th><th>Realizado</th><th>Situação</th></tr></thead><tbody id="tbEtapas"></tbody></table>
+    <div class="card" style="padding:0">
+      <div class="card-h" style="padding:18px 20px 0"><h3><svg class="i"><use href="#i-list"/></svg>Etapas: previsto x realizado</h3></div>
+      <div class="wrap"><table class="steps"><thead><tr><th style="width:44px"></th><th>Etapa</th><th>Prazo</th><th class="hide-sm">Previsto</th><th>Realizado</th><th>Situação</th></tr></thead><tbody id="tbEtapas"></tbody></table></div>
     </div>
-    <div class="card wrap">
-      <div class="bar"><h3 style="margin:0;flex:1">Histórico de marcações</h3><button id="btnLimpar" class="del sm">Limpar todo o histórico</button></div>
-      <p class="mut" style="margin-top:0">Marcou errado? Clique em <b>Remover</b> na linha. A etapa atual volta a ser a marcação anterior.</p>
-      <table><thead><tr><th>Etapa</th><th>Desde</th><th>Registrado em</th><th>Por</th><th>Obs.</th><th></th></tr></thead><tbody id="tbHist"></tbody></table>
+    <div class="card" style="padding:0">
+      <div class="card-h" style="padding:18px 20px 0;margin-bottom:4px">
+        <h3><svg class="i"><use href="#i-hist"/></svg>Histórico de marcações</h3>
+        <button id="btnLimpar" class="del sm"><svg class="i s"><use href="#i-sweep"/></svg>Limpar histórico</button>
+      </div>
+      <p class="mut" style="margin:0 20px 10px">Marcou errado? Use <b>Remover</b> na linha: a etapa atual volta a ser a marcação anterior.</p>
+      <div class="wrap"><table><thead><tr><th>Etapa</th><th>Desde</th><th class="hide-sm">Registrado em</th><th class="hide-sm">Por</th><th class="hide-sm">Obs.</th><th></th></tr></thead><tbody id="tbHist"></tbody></table></div>
     </div>
   </section>
 </main>
 
 <dialog id="dlgNovo">
   <form id="fNovo">
-    <h3 style="margin-top:0" id="tNovo">Novo processo</h3>
+    <h3 id="tNovo" style="font-size:17px">Novo processo</h3>
     <label>Município</label><input name="municipio" required>
     <label>Data de início (etapa 1)</label><input name="data_inicio" type="date" required>
     <label>Observação</label><input name="observacao">
-    <div class="row"><button type="button" onclick="dlgNovo.close()">Cancelar</button><button class="pri" id="bNovo">Criar</button></div>
+    <div class="row"><button type="button" class="ghost" onclick="dlgNovo.close()">Cancelar</button><button class="pri"><svg class="i s"><use href="#i-check"/></svg><span id="bNovo">Criar</span></button></div>
   </form>
 </dialog>
 
@@ -233,10 +346,14 @@ function calcular(p, todas) {
   const progresso = Math.round(100 * (somaDias(1, atual) + Math.min(naEtapa, et.dias)) / somaDias(1, FIM));
   return { p, ms, linhas, atual, et, desde, prazo, naEtapa, resta, prevFim, fimPlanejado, desvio, status, cls, progresso };
 }
-const desvioTxt = d => d > 0 ? `<span style="color:var(--bad)">+${d} dias</span>` : d < 0 ? `<span style="color:var(--ok)">${d} dias</span>` : "0";
+const desvioTxt = d => d > 0 ? `<span class="pos">+${d} dias</span>` : d < 0 ? `<span class="neg">${d} dias</span>` : "0 dias";
 const unid = C.DIAS_UTEIS ? "dias úteis" : "dias";
 
+
 /* ---------- Render ---------- */
+const ico = (n, c = "i s") => `<svg class="${c}"><use href="#i-${n}"/></svg>`;
+const ICO_ST = { ok: "okc", warn: "warn", bad: "alert", done: "check" };
+const tag = (cls, txt) => `<span class="tag ${cls}">${ico(ICO_ST[cls] || "clock", "")}${txt}</span>`;
 let cache = { procs: [], marcs: [] }, abertoId = null;
 async function carregar() {
   [cache.procs, cache.marcs] = await Promise.all([db.processos(), db.marcacoes()]);
@@ -248,20 +365,22 @@ function lista() {
   abertoId = null; mostrar("vLista");
   const rs = cache.procs.map(p => calcular(p, cache.marcs));
   const cnt = s => rs.filter(r => r.status === s).length;
+  const f = $("#filtro").value;
   $("#kpis").innerHTML = [
-    ["Processos", rs.length], ["Atrasados", cnt("Atrasado")], ["Atenção", cnt("Atenção")],
-    ["No prazo", cnt("No prazo")], ["Concluídos", cnt("Concluído")],
-  ].map(([t, v]) => `<div class="kpi"><b>${v}</b><span>${t}</span></div>`).join("");
-  const q = $("#busca").value.toLowerCase(), f = $("#filtro").value;
+    ["", "Processos", rs.length, "all", "folder"], ["Atrasado", "Atrasados", cnt("Atrasado"), "bad", "alert"],
+    ["Atenção", "Atenção", cnt("Atenção"), "warn", "warn"], ["No prazo", "No prazo", cnt("No prazo"), "ok", "okc"],
+    ["Concluído", "Concluídos", cnt("Concluído"), "done", "check"],
+  ].map(([s, t, v, c, i]) => `<div class="kpi${f === s ? " on" : ""}" data-f="${s}"><div class="ic ${c}">${ico(i, "i")}</div><div><b>${v}</b><span>${t}</span></div></div>`).join("");
+  const q = $("#busca").value.toLowerCase();
   const ordem = { Atrasado: 0, "Atenção": 1, "No prazo": 2, "Concluído": 3 };
   const vis = rs.filter(r => r.p.municipio.toLowerCase().includes(q) && (!f || r.status === f))
     .sort((a, b) => ordem[a.status] - ordem[b.status] || b.desvio - a.desvio);
   $("#vazio").classList.toggle("hide", vis.length > 0);
   $("#tbLista").innerHTML = vis.map(r => `
     <tr class="click" data-id="${r.p.id}">
-      <td><b>${esc(r.p.municipio)}</b><div class="mut">início ${br(parse(r.p.data_inicio))}</div></td>
-      <td>${r.concluido ? "Concluído" : `${r.atual}/${N} · ${esc(r.et.nome)}`}<div class="prog"><i style="width:${r.progresso}%"></i></div></td>
-      <td><span class="tag ${r.cls}">${r.status}</span>${!r.concluido && r.resta < 0 ? `<div class="mut">${-r.resta} ${unid} além do prazo</div>` : ""}</td>
+      <td><div class="nm">${esc(r.p.municipio)}</div><div class="mut">Início ${br(parse(r.p.data_inicio))}</div></td>
+      <td>${r.concluido ? "Processo concluído" : `<span class="mut">${r.atual}/${N}</span> ${esc(r.et.nome)}`}<div class="prog"><i style="width:${r.progresso}%"></i></div></td>
+      <td>${tag(r.cls, r.status)}${!r.concluido && r.resta < 0 ? `<div class="mut" style="margin-top:3px">${-r.resta} ${unid} além do prazo</div>` : ""}</td>
       <td class="hide-sm">${r.concluido ? "—" : `${r.naEtapa} de ${r.et.dias} ${unid}<div class="mut">desde ${br(r.desde)}</div>`}</td>
       <td class="hide-sm">${br(r.prevFim)}<div class="mut">planejado ${br(r.fimPlanejado)}</div></td>
       <td class="hide-sm">${desvioTxt(r.desvio)}</td>
@@ -273,47 +392,54 @@ function detalhe(id) {
   abertoId = id; mostrar("vDet");
   const r = calcular(p, cache.marcs);
   $("#dTitulo").textContent = p.municipio;
-  $("#dStatus").innerHTML = `<span class="tag ${r.cls}">${r.status}</span>`;
-  const it = (t, v) => `<div><div class="mut">${t}</div><b>${v}</b></div>`;
+  $("#dStatus").innerHTML = tag(r.cls, r.status);
+  $("#dProg").style.width = r.progresso + "%";
+  const it = (i, t, v) => `<div class="stat">${ico(i, "i")}<div><span class="mut">${t}</span><b>${v}</b></div></div>`;
   $("#dResumo").innerHTML = [
-    it("Etapa atual", r.concluido ? "Processo concluído" : `${r.atual}/${N} — ${esc(r.et.nome)}`),
-    r.concluido ? it("Concluído em", br(r.desde)) : it("Na etapa desde", `${br(r.desde)} (${r.naEtapa} ${unid})`),
-    r.concluido ? "" : it("Prazo da etapa", `${br(r.prazo)} · ${r.resta >= 0 ? `faltam ${r.resta}` : `${-r.resta} de atraso`}`),
-    it("Término previsto x planejado", `${br(r.prevFim)} x ${br(r.fimPlanejado)}`),
-    it("Desvio no prazo final", desvioTxt(r.desvio)),
-    it("Início / progresso", `${br(parse(p.data_inicio))} · ${r.progresso}%`),
-    p.observacao ? it("Observação", esc(p.observacao)) : "",
+    it("pin", "Etapa atual", r.concluido ? "Processo concluído" : `${r.atual}/${N} · ${esc(r.et.nome)}`),
+    r.concluido ? it("check", "Concluído em", br(r.desde)) : it("clock", "Na etapa desde", `${br(r.desde)} · ${r.naEtapa} ${unid}`),
+    r.concluido ? "" : it("flag", "Prazo da etapa", `${br(r.prazo)} · ${r.resta >= 0 ? `faltam ${r.resta} ${unid}` : `<span class="pos">${-r.resta} ${unid} de atraso</span>`}`),
+    it("cal", "Término previsto x planejado", `${br(r.prevFim)} x ${br(r.fimPlanejado)}`),
+    it("trend", "Desvio no prazo final", desvioTxt(r.desvio)),
+    it("folder", "Início · progresso", `${br(parse(p.data_inicio))} · ${r.progresso}%`),
+    p.observacao ? it("note", "Observação", esc(p.observacao)) : "",
   ].join("");
-  $("#selEtapa").innerHTML = ET.map(e => `<option value="${e.n}">${e.n}. ${esc(e.nome)}</option>`).join("") + `<option value="${FIM}">✔ Processo concluído</option>`;
+  $("#selEtapa").innerHTML = ET.map(e => `<option value="${e.n}">${e.n}. ${esc(e.nome)}</option>`).join("") + `<option value="${FIM}">Processo concluído</option>`;
   $("#selEtapa").value = Math.min(r.atual + (r.ms.length ? 1 : 0), FIM);
   $("#fMarcar").data.value = iso(hoje());
   $("#tbEtapas").innerHTML = r.linhas.map(l => {
-    let sit = "", dur = "";
+    let sit, dur, num;
+    const cur = l.n === r.atual && !r.concluido;
     if (l.rIni && l.rFim) {
       const d = diff(l.rIni, l.rFim), x = d - l.dias;
-      dur = `${br(l.rIni)} → ${br(l.rFim)}<div class="mut">${d} ${unid}</div>`;
-      sit = x > 0 ? `<span class="tag bad">+${x} ${unid}</span>` : `<span class="tag ok">Concluída${x < 0 ? ` (${x})` : ""}</span>`;
-    } else if (l.n === r.atual && !r.concluido) {
+      dur = `${br(l.rIni)} → ${br(l.rFim)}<div class="mut">${d} ${d === 1 ? unid.replace("dias", "dia") : unid}</div>`;
+      sit = x > 0 ? tag("bad", `+${x} ${unid}`) : tag("ok", `Concluída${x < 0 ? ` (${x})` : ""}`);
+      num = `<div class="num ${x > 0 ? "late" : "ok"}">${ico("check", "")}</div>`;
+    } else if (cur) {
       dur = `${br(l.rIni)} → em andamento<div class="mut">${r.naEtapa} ${unid}</div>`;
-      sit = `<span class="tag ${r.cls}">${r.status}</span>`;
-    } else if (l.n < r.atual) { dur = "—"; sit = `<span class="tag done">Pulada/sem registro</span>`; }
-    else { dur = "—"; sit = `<span class="mut">Aguardando</span>`; }
-    return `<tr class="${l.n === r.atual && !r.concluido ? "cur" : ""}"><td class="n">${l.n}</td>
-      <td>${esc(l.nome)}<div class="mut">${l.fase}${l.estimado ? " · prazo estimado" : ""}</div></td>
-      <td>${l.dias}</td><td>${br(l.pIni)} → ${br(l.pFim)}</td><td>${dur}</td><td>${sit}</td></tr>`;
+      sit = tag(r.cls, r.status); num = `<div class="num cur">${l.n}</div>`;
+    } else if (l.n < r.atual) {
+      dur = "—"; sit = tag("done", "Sem registro"); num = `<div class="num skip">${l.n}</div>`;
+    } else {
+      dur = "—"; sit = `<span class="mut">Aguardando</span>`; num = `<div class="num">${l.n}</div>`;
+    }
+    return `<tr class="${cur ? "cur" : ""}"><td>${num}</td>
+      <td>${esc(l.nome)}<div><span class="fase">${l.fase}</span>${l.estimado ? `<span class="est">prazo estimado</span>` : ""}</div></td>
+      <td style="white-space:nowrap">${l.dias} ${l.dias === 1 ? unid.replace("dias", "dia") : unid}</td><td class="hide-sm">${br(l.pIni)} → ${br(l.pFim)}</td><td>${dur}</td><td>${sit}</td></tr>`;
   }).join("");
   $("#tbHist").innerHTML = [...r.ms].reverse().map(m => `<tr>
-      <td>${m.etapa >= FIM ? "Concluído" : m.etapa + ". " + esc(ET[m.etapa-1].nome)}</td>
-      <td>${br(parse(m.data))}</td><td>${new Date(m.registrado_em).toLocaleString("pt-BR")}</td>
-      <td>${esc(m.usuario)}</td><td>${esc(m.observacao)}</td>
-      <td><button class="del sm" data-del="${m.id}">🗑 Remover</button></td></tr>`).join("")
-    || `<tr><td colspan="6" class="mut">Nenhuma marcação ainda — etapa 1 conta a partir da data de início.</td></tr>`;
+      <td>${m.etapa >= FIM ? "Processo concluído" : `<span class="mut">${m.etapa}.</span> ${esc(ET[m.etapa-1].nome)}`}</td>
+      <td>${br(parse(m.data))}</td><td class="hide-sm">${new Date(m.registrado_em).toLocaleString("pt-BR")}</td>
+      <td class="hide-sm">${esc(m.usuario)}</td><td class="hide-sm">${esc(m.observacao)}</td>
+      <td style="text-align:right"><button class="del sm" data-del="${m.id}">${ico("trash")}Remover</button></td></tr>`).join("")
+    || `<tr><td colspan="6"><div class="empty">${ico("hist", "i")}Nenhuma marcação ainda. A etapa 1 conta a partir da data de início.</div></td></tr>`;
 }
 
 /* ---------- Eventos ---------- */
 const tentar = fn => async (...a) => { try { await fn(...a); } catch (e) { alert("Erro: " + (e.message || e)); } };
 $("#tbLista").onclick = e => { const tr = e.target.closest("tr[data-id]"); if (tr) detalhe(tr.dataset.id); };
 $("#busca").oninput = lista; $("#filtro").onchange = lista;
+$("#kpis").onclick = e => { const k = e.target.closest("[data-f]"); if (k) { $("#filtro").value = k.dataset.f; lista(); } };
 $("#btnVoltar").onclick = lista;
 let editId = null;
 function abrirForm(p) {
@@ -340,7 +466,7 @@ $("#fMarcar").onsubmit = tentar(async e => {
   f.obs.value = ""; await carregar();
 });
 $("#tbHist").onclick = tentar(async e => {
-  const id = e.target.dataset.del; if (!id || !confirm("Remover esta marcação?")) return;
+  const id = e.target.closest("[data-del]")?.dataset.del; if (!id || !confirm("Remover esta marcação?")) return;
   await db.delMarcacao(isNaN(id) ? id : +id); await carregar();
 });
 $("#btnExcluir").onclick = tentar(async () => {
@@ -354,7 +480,7 @@ async function iniciar() {
   sb = supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY);
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return mostrar("vLogin");
-  $("#who").textContent = session.user.email; $("#btnSair").classList.remove("hide");
+  $("#who").textContent = session.user.email; $("#btnSair").classList.remove("hide"); $("#whoBox").classList.remove("hide");
   await carregar();
 }
 $("#fLogin").onsubmit = async e => {
